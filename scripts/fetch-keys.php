@@ -35,10 +35,14 @@ const LITE_FILE_PATH = OUTPUT_DIR . '/lite';
 function ensureOutputDirectory(string $dirPath): void
 {
     if (!is_dir($dirPath)) {
+        echo "Output directory does not exist. Creating: {$dirPath}\n";
         if (!mkdir($dirPath, 0755, true) && !is_dir($dirPath)) {
             error_log("Failed to create directory: {$dirPath}");
             exit(1);
         }
+        echo "Output directory created successfully.\n";
+    } else {
+        echo "Output directory exists: {$dirPath}\n";
     }
 }
 
@@ -50,6 +54,7 @@ function ensureOutputDirectory(string $dirPath): void
  */
 function fetchContent(string $url)
 {
+    echo "Fetching content from URL: {$url}\n";
     $ch = curl_init($url);
     if ($ch === false) {
         error_log("cURL initialization failed for URL: {$url}");
@@ -67,6 +72,8 @@ function fetchContent(string $url)
     $data = curl_exec($ch);
     if ($data === false) {
         error_log("cURL error for URL {$url}: " . curl_error($ch));
+    } else {
+        echo "Successfully fetched content from {$url}\n";
     }
 
     curl_close($ch);
@@ -83,8 +90,11 @@ function fetchContent(string $url)
 function extractKeys(string $content, string $pattern): array
 {
     if (preg_match_all($pattern, $content, $matches)) {
+        $count = count($matches[1]);
+        echo "Extracted {$count} keys using regex pattern.\n";
         return $matches[1];
     }
+    echo "No keys found using regex pattern.\n";
     return [];
 }
 
@@ -101,13 +111,18 @@ function writeKeysToFile(array $keys, string $filePath, int $maxCount, bool $shu
 {
     if ($shuffle) {
         shuffle($keys);
+        echo "Keys shuffled for 'lite' file.\n";
     }
 
     $selectedKeys = array_slice($keys, 0, $maxCount);
+    $count = count($selectedKeys);
+    echo "Writing {$count} keys to file: {$filePath}\n";
     $content = implode(PHP_EOL, $selectedKeys) . PHP_EOL;
 
     if (file_put_contents($filePath, $content) === false) {
         error_log("Failed to write to file: {$filePath}");
+    } else {
+        echo "Successfully wrote to file: {$filePath}\n";
     }
 }
 
@@ -118,6 +133,8 @@ function writeKeysToFile(array $keys, string $filePath, int $maxCount, bool $shu
  */
 function main(): void
 {
+    echo "Starting key fetching process.\n";
+
     // Ensure the output directory exists
     ensureOutputDirectory(OUTPUT_DIR);
 
@@ -134,13 +151,17 @@ function main(): void
         $extractedKeys = extractKeys($content, REGEX_PATTERN);
         if (!empty($extractedKeys)) {
             $allKeys = array_merge($allKeys, $extractedKeys);
+            echo "Merged " . count($extractedKeys) . " keys from {$url}\n";
         } else {
-            error_log("No keys found in URL: {$url}");
+            echo "No keys extracted from {$url}\n";
         }
     }
 
     $uniqueKeys = array_unique($allKeys);
-    if (empty($uniqueKeys)) {
+    $totalUnique = count($uniqueKeys);
+    echo "Total unique keys extracted: {$totalUnique}\n";
+
+    if ($totalUnique === 0) {
         error_log("No unique keys found across all URLs.");
         exit(0);
     }
@@ -157,3 +178,4 @@ function main(): void
 
 // Execute the main function
 main();
+?>
