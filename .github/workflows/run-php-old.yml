@@ -1,0 +1,55 @@
+name: Run PHP Script and Update Keys
+
+# Trigger the workflow on a schedule (daily at midnight UTC)
+on:
+  schedule:
+    - cron: '0 * * * *'  # Runs every day at 00:00 UTC
+  workflow_dispatch:       # Allows manual triggering of the workflow
+
+jobs:
+  update-keys:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -e {0}
+    steps:
+      # 1. Checkout Repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false  # Disable automatic token injection
+
+      # 2. Set Up PHP Environment
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'          # Specify the PHP version you need
+          extensions: mbstring, curl  # Add any required PHP extensions
+          ini-values: post_max_size=256M, upload_max_filesize=256M
+
+      # 3. Run PHP Script
+      - name: Run PHP Script
+        run: php scripts/fetch_keys.php
+
+      # 4. Set Up Git User and Email
+      - name: Set Up Git User
+        uses: fregante/setup-git-user@v2
+
+      # 5. Commit Changes
+      - name: Commit Changes
+        run: |
+          # Check for changes in the 'plus' directory
+          if git diff --quiet plus; then
+            echo "No changes detected in 'plus' directory."
+          else
+            git add plus/full plus/lite
+            git commit --message "Update keys on $(date +'%Y-%m-%d')"
+          fi
+
+      # 6. Push Changes
+      - name: Push Changes
+        if: github.ref == 'refs/heads/main'  # Replace 'main' with your default branch if different
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push origin HEAD:${{ github.ref }}
