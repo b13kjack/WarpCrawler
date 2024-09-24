@@ -1,88 +1,60 @@
-name: Run PHP Script and Update Keys
+name: "Collect WARP+ KEYS"
 
-# Trigger the workflow on a schedule (daily at midnight UTC) and allow manual triggers
 on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
   schedule:
-    - cron: '0 0 * * *'  # Runs every day at 00:00 UTC
-  workflow_dispatch:       # Allows manual triggering of the workflow
+    - cron: '0 * * * *'  # Runs at minute 0 of every hour
 
 jobs:
-  update-keys:
+  build:
     runs-on: ubuntu-latest
-
+    defaults:
+      run:
+        shell: bash -e {0}
     steps:
       # 1. Checkout Repository
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v3
         with:
-          persist-credentials: false  # Disable automatic token injection
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      # 2. Setup PHP Environment
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'              # Updated PHP version for better features and security
+          extensions: mbstring, curl      # Added required PHP extensions
+          ini-values: post_max_size=256M, upload_max_filesize=256M  # Increased limits if needed
 
-      # 2. Set Up Git User and Email
+      # 3. Execute PHP Script
+      - name: Execute PHP script
+        run: php scripts/fetch_keys.php
+
+      # 4. Set Up Git User and Email
       - name: Set Up Git User
         uses: fregante/setup-git-user@v2
         with:
           name: github-actions[bot]
           email: github-actions[bot]@users.noreply.github.com
 
-      # 3. Set Up PHP Environment
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+      # 5. Commit Changes if Any
+      - name: Commit changes
+        run: |
+          # Stage all changes in the 'plus/' directory
+          git add plus/full plus/lite
+
+          # Check if there are any staged changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            # Commit with a timestamped message in Tehran timezone
+            git commit -m "💡 Automatic update - $(TZ='Asia/Tehran' date '+%Y-%m-%d %H:%M')"
+          fi
+
+      # 6. Push Changes
+      - name: Push changes
+        uses: ad-m/github-push-action@master
         with:
-          php-version: '8.1'          # Specify the PHP version you need
-          extensions: mbstring, curl  # Add any required PHP extensions
-          ini-values: post_max_size=256M, upload_max_filesize=256M
-
-      # 4. Install Composer Dependencies (Optional)
-      - name: Install Composer Dependencies
-        if: file_exists('composer.json')
-        run: |
-          php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-          php composer-setup.php --install-dir=/usr/local/bin --filename=composer
-          composer install --no-progress --no-suggest --prefer-dist
-
-      # 5. List Repository Files (Diagnostic Step)
-      - name: List Repository Files
-        run: |
-          echo "Listing repository root:"
-          ls -la
-          echo "Listing 'scripts/' directory:"
-          ls -la scripts/
-
-      # 6. Run PHP Script
-      - name: Run PHP Script
-        run: php scripts/fetch_keys.php
-
-      # 7. List 'plus/' Directory Contents for Verification
-      - name: List 'plus/' Directory
-        run: ls -la plus/
-
-      # 8. Display Contents of 'full' and 'lite' Files (Optional)
-      - name: Display 'full' File Contents
-        run: cat plus/full || echo "'full' file does not exist."
-
-      - name: Display 'lite' File Contents
-        run: cat plus/lite || echo "'lite' file does not exist."
-
-      # 9. Commit Changes if Any
-      - name: Commit Changes
-        run: |
-          # Check for changes in the 'plus' directory
-          if git diff --quiet plus; then
-            echo "No changes detected in 'plus' directory."
-          else
-            git add plus/full plus/lite
-            git commit --message "Update keys on $(date +'%Y-%m-%d')"
-          fi
-
-      # 10. Push Changes
-      - name: Push Changes
-        if: github.ref == 'refs/heads/main'  # Replace 'main' with your default branch if different
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Only push if there are commits to push
-          if git rev-parse --verify HEAD >/dev/null 2>&1; then
-            git push origin HEAD:${{ github.ref }}
-          else
-            echo "No commits to push."
-          fi
+          github_token: ${{ secrets.GITHUB_TOKEN }}
