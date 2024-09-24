@@ -33,9 +33,9 @@ jobs:
       # 4. Set Up Git User and Email
       - name: Set Up Git User
         uses: fregante/setup-git-user@v2
-        with:
-          name: github-actions[bot]
-          email: github-actions[bot]@users.noreply.github.com
+        #with:
+          #name: github-actions[bot]
+          #email: github-actions[bot]@users.noreply.github.com
 
       # 5. Commit Changes if Any
       - name: Commit changes
