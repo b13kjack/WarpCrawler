@@ -1,4 +1,4 @@
-name: "Collect WARP+ KEYS"
+name: "Collect Keys"
 
 on:
   workflow_dispatch:
@@ -34,8 +34,8 @@ jobs:
       - name: Set Up Git User
         uses: fregante/setup-git-user@v2
         with:
-          name: github-actions[bot]
-          email: github-actions[bot]@users.noreply.github.com
+          name: ''
+          email: ''
 
       # 5. Commit Changes if Any
       - name: Commit changes
