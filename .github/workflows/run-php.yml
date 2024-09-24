@@ -52,7 +52,13 @@ jobs:
           fi
 
       # 6. Push Changes
+      # - name: Push changes
+      #   uses: ad-m/github-push-action@master
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      # Alternative Push Action
       - name: Push changes
-        uses: ad-m/github-push-action@master
+        uses: peter-evans/push@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main  # Specify the branch to push to
